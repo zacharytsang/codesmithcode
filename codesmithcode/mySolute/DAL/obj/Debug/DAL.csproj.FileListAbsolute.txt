@@ -1,0 +1,7 @@
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\obj\Debug\DAL.csprojResolveAssemblyReference.cache
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\obj\Debug\DAL.dll
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\obj\Debug\DAL.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\bin\Debug\DAL.dll
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\bin\Debug\DAL.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\bin\Debug\Models.dll
+D:\Desktop\SimpleThreeTiers\mySolute\DAL\bin\Debug\Models.pdb

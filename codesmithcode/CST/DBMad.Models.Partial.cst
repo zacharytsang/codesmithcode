@@ -1,0 +1,475 @@
+<%@ CodeTemplate Language="C#" TargetLanguage="C#" Description="Generates a very simple business object." %>
+<%@ Property Name="TargetTable" Type="SchemaExplorer.TableSchema" Category="Context" Description="TargetTable that the object is based on." %>
+<%@ Property Name="ModelsNamespace" Default="Models" Type="System.String" Category="Context" Description="TargetTable that the object is based on." %>
+<%@ Assembly Name="SchemaExplorer" %>
+<%@ Assembly Name="System.Data" %>
+<%@ Import Namespace="SchemaExplorer" %>
+<%@ Import Namespace="System.Data" %>
+<%@ Import Namespace="System.IO" %>
+<%@ Import Namespace="System.Text.RegularExpressions" %>
+<% PrintHeader(); %>
+using System;
+using System.Collections.Generic;
+using System.Text;
+namespace <%= ModelsNamespace %>
+{
+	
+	public partial class <%= GetModelClassName() %>
+	{
+
+	}
+}
+
+
+<script runat="template">
+///////////////////////////////////////////////////////////////
+// CLASS NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetTableMapping()
+{
+	string result;
+	result = string.Format("[DBTable(\"{0}\")]", TargetTable.Name);
+	return 	result;
+}
+public string GetModelClassName()
+{
+	return 	GetModelClassName(TargetTable);
+}
+public string GetModelClassName(TableSchema table)
+{
+	string result;
+	if ( table.ExtendedProperties.Contains("ModelName") )
+	{
+		result = (string)table.ExtendedProperties["ModelName"].Value;	
+		return MakePascal(result);
+	}
+
+	if (table.Name.EndsWith("s"))
+	{
+		//result = table.Name.Substring(0, table.Name.Length - 1);
+		result = MakeSingle(table.Name);
+	}
+	else
+	{
+		result = table.Name;
+	}
+
+	return MakePascal(result);
+}
+
+///////////////////////////////////////////////////////////////
+// PRIMARY KEY MAPPING by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetPKMapping()
+{
+	string result;
+	result = string.Format("[DBField(\"{0}\")]", TargetTable.PrimaryKey.MemberColumns[0].Name);
+	return 	result;
+}
+
+///////////////////////////////////////////////////////////////
+// PRIMARY KEY TYPE by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetPKPropertyType()
+{
+	return 	GetPKType(TargetTable);
+}
+public string GetPKType()
+{
+	return 	GetPKType(TargetTable);
+}
+public string GetPKType(TableSchema TargetTable)
+{
+	if (TargetTable.PrimaryKey != null)
+	{
+		if (TargetTable.PrimaryKey.MemberColumns.Count == 1)
+		{
+			return GetCSharpTypeFromDBFieldType(TargetTable.PrimaryKey.MemberColumns[0]);
+		}
+		else
+		{
+			throw new ApplicationException("This template will not work on primary keys with more than one member column.");
+		}
+	}
+	else
+	{
+		throw new ApplicationException("This template will only work on MyTables with a primary key.");
+	}
+}
+
+///////////////////////////////////////////////////////////////
+// PRIMARY KEY NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetPKPropertyName()
+{
+	return MakePascal(GetPKName());
+}
+public string GetPKMemberVarName()
+{
+	return MakeCamel(GetPKName());	
+}
+public string GetPKName()
+{
+	return GetPKName(TargetTable);
+}
+public string GetPKName(TableSchema TargetTable)
+{
+	if (TargetTable.PrimaryKey != null)
+	{
+		if (TargetTable.PrimaryKey.MemberColumns.Count == 1)
+		{
+			return TargetTable.PrimaryKey.MemberColumns[0].Name;
+		}
+		else
+		{
+			throw new ApplicationException("This template will not work on primary keys with more than one member column.");
+		}
+	}
+	else
+	{
+		throw new ApplicationException("This template will only work on tables with a primary key.");
+	}
+}
+
+
+///////////////////////////////////////////////////////////////
+// PRIMARY KEY MAPPING by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetFKMapping(TableKeySchema key)
+{
+	string result;
+	result = string.Format("[DBField(\"{0}\")]", key.ForeignKeyMemberColumns[0].Name);
+	return 	result;
+}
+
+///////////////////////////////////////////////////////////////
+// FOREIGH KEY TYPE by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetFKPropertyType(TableKeySchema key)
+{
+	return MakePascal(GetFKPrimaryModelClassName(key));
+}
+
+///////////////////////////////////////////////////////////////
+// FOREIGH KEY ID NAMEs by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetFKForeignIdName(TableKeySchema key)
+{
+	return key.ForeignKeyMemberColumns[0].Name;
+}
+public string GetFKPrimaryIdName(TableKeySchema key)
+{
+	return key.PrimaryKeyMemberColumns[0].Name;
+}
+
+///////////////////////////////////////////////////////////////
+// FOREIGH KEY NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetFKMemberVarName(TableKeySchema key)
+{
+//	return MakeCamel(GetFKName(key));
+	string result = GetFKForeignIdName(key);
+	if( result.ToLower().EndsWith("id") )
+	{
+		result = result.Substring(0, result.Length - 2);	
+	}
+	return MakeCamel(result);
+}
+public string GetFKPropertyName(TableKeySchema key)
+{
+	return MakePascal(GetFKMemberVarName(key));
+}
+public string GetFKPrimaryModelClassName(TableKeySchema key)
+{
+	return GetModelClassName(key.PrimaryKeyTable);
+}
+
+
+///////////////////////////////////////////////////////////////
+// PROPERTY TYPE by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetPropertyType(ColumnSchema column)
+{
+	return GetCSharpTypeFromDBFieldType(column);
+}
+public string GetMemberVarType(ColumnSchema column)
+{
+	return GetPropertyType(column);
+}
+public string GetCSharpTypeFromDBFieldType(ColumnSchema column)
+{
+	if (column.Name.EndsWith("TypeCode")) return column.Name;
+	
+	switch (column.DataType)
+	{
+		case DbType.AnsiString: return "string";
+		case DbType.AnsiStringFixedLength: return "string";
+		case DbType.Binary: return "byte[]";
+		case DbType.Boolean: return "bool";
+		case DbType.Byte: return "byte";
+		case DbType.Currency: return "decimal";
+		case DbType.Date: return "DateTime";
+		case DbType.DateTime: return "DateTime";
+		case DbType.Decimal: return "decimal";
+		case DbType.Double: return "double";
+		case DbType.Guid: return "Guid";
+		case DbType.Int16: return "short";
+		case DbType.Int32: return "int";
+		case DbType.Int64: return "long";
+		case DbType.Object: return "object";
+		case DbType.SByte: return "sbyte";
+		case DbType.Single: return "float";
+		case DbType.String: return "string";
+		case DbType.StringFixedLength: return "string";
+		case DbType.Time: return "TimeSpan";
+		case DbType.UInt16: return "ushort";
+		case DbType.UInt32: return "uint";
+		case DbType.UInt64: return "ulong";
+		case DbType.VarNumeric: return "decimal";
+		default:
+		{
+			return "__UNKNOWN__" + column.NativeType;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////
+// PROPERTY NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetMemberVarName(ColumnSchema column)
+{
+	return MakeCamel(GetNameFromDBFieldName(column));
+}
+
+public string GetPropertyName(ColumnSchema column)
+{
+	return MakePascal(GetNameFromDBFieldName(column));
+}
+public string GetNameFromDBFieldName(ColumnSchema column)
+{
+	return column.Name;
+}
+
+///////////////////////////////////////////////////////////////
+// COLUMN MAPPING by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetFieldMapping(ColumnSchema column)
+{
+	string result;
+	result = string.Format("[DBField(\"{0}\")]", column.Name);
+	return 	result;
+}
+		
+public string GetMemberVariableDefaultValue(ColumnSchema column)
+{
+	switch (column.DataType)
+	{
+		case DbType.Guid:
+		{
+			return "Guid.Empty";
+		}
+		case DbType.AnsiString:
+		case DbType.AnsiStringFixedLength:
+		case DbType.String:
+		case DbType.StringFixedLength:
+		{
+			return "String.Empty";
+		}
+		default:
+		{
+			return "";
+		}
+	}
+}
+
+
+public string GetReaderMethod(ColumnSchema column)
+{
+	switch (column.DataType)
+	{
+		case DbType.Byte:
+		{
+			return "GetByte";
+		}
+		case DbType.Int16:
+		{
+			return "GetInt16";
+		}
+		case DbType.Int32:
+		{
+			return "GetInt32";
+		}
+		case DbType.Int64:
+		{
+			return "GetInt64";
+		}
+		case DbType.AnsiStringFixedLength:
+		case DbType.AnsiString:
+		case DbType.String:
+		case DbType.StringFixedLength:
+		{
+			return "GetString";
+		}
+		case DbType.Boolean:
+		{
+			return "GetBoolean";
+		}
+		case DbType.Guid:
+		{
+			return "GetGuid";
+		}
+		case DbType.Currency:
+		case DbType.Decimal:
+		{
+			return "GetDecimal";
+		}
+		case DbType.DateTime:
+		case DbType.Date:
+		{
+			return "GetDateTime";
+		}
+		case DbType.Binary:
+		{
+			return "GetBytes";
+		}
+		default:
+		{
+			return "__SQL__" + column.DataType;
+		}
+	}
+}
+
+public string GetSqlDbType(ColumnSchema column)
+{
+	switch (column.NativeType)
+	{
+		case "bigint": return "BigInt";
+		case "binary": return "Binary";
+		case "bit": return "Bit";
+		case "char": return "Char";
+		case "datetime": return "DateTime";
+		case "decimal": return "Decimal";
+		case "float": return "Float";
+		case "image": return "Image";
+		case "int": return "Int";
+		case "money": return "Money";
+		case "nchar": return "NChar";
+		case "ntext": return "NText";
+		case "numeric": return "Decimal";
+		case "nvarchar": return "NVarChar";
+		case "real": return "Real";
+		case "smalldatetime": return "SmallDateTime";
+		case "smallint": return "SmallInt";
+		case "smallmoney": return "SmallMoney";
+		case "sql_variant": return "Variant";
+		case "sysname": return "NChar";
+		case "text": return "Text";
+		case "timestamp": return "Timestamp";
+		case "tinyint": return "TinyInt";
+		case "uniqueidentifier": return "UniqueIdentifier";
+		case "varbinary": return "VarBinary";
+		case "varchar": return "VarChar";
+		default: return "__UNKNOWN__" + column.NativeType;
+	}
+}
+
+//So dirty function! -- reviewed by shenbo
+public string MakeCamel(string value)
+{
+	return value.Substring(0, 1).ToLower() + value.Substring(1);
+}
+
+//I will be dirty too! -- coded by shenbo
+public string MakePascal(string value)
+{
+	return value.Substring(0, 1).ToUpper() + value.Substring(1);
+}
+
+public string MakePlural(string name)
+{
+	Regex plural1 = new Regex("(?<keep>[^aeiou])y$");
+	Regex plural2 = new Regex("(?<keep>[aeiou]y)$");
+	Regex plural3 = new Regex("(?<keep>[sxzh])$");
+	Regex plural4 = new Regex("(?<keep>[^sxzhy])$");
+
+	if(plural1.IsMatch(name))
+		return plural1.Replace(name, "${keep}ies");
+	else if(plural2.IsMatch(name))
+		return plural2.Replace(name, "${keep}s");
+	else if(plural3.IsMatch(name))
+		return plural3.Replace(name, "${keep}es");
+	else if(plural4.IsMatch(name))
+		return plural4.Replace(name, "${keep}s");
+
+	return name;
+}
+
+public string MakeSingle(string name)
+{
+	Regex plural1 = new Regex("(?<keep>[^aeiou])ies$");
+	Regex plural2 = new Regex("(?<keep>[aeiou]y)s$");
+	Regex plural3 = new Regex("(?<keep>[sxzh])es$");
+	Regex plural4 = new Regex("(?<keep>[^sxzhyu])s$");
+
+	if(plural1.IsMatch(name))
+		return plural1.Replace(name, "${keep}y");
+	else if(plural2.IsMatch(name))
+		return plural2.Replace(name, "${keep}");
+	else if(plural3.IsMatch(name))
+		return plural3.Replace(name, "${keep}");
+	else if(plural4.IsMatch(name))
+		return plural4.Replace(name, "${keep}");
+
+	return name;
+}
+public override string GetFileName()
+{
+	return this.GetModelClassName(this.TargetTable) + ".cs";
+}
+
+public void PrintHeader()
+{
+	Response.WriteLine("//============================================================");
+	Response.WriteLine("// Producnt name:		Models Extender");
+	Response.WriteLine("// Version: 			7.0");
+	Response.WriteLine("// Coded by:			tjh");
+	Response.WriteLine("// Auto generated at: 	{0}", DateTime.Now);
+	Response.WriteLine("//============================================================");
+	Response.WriteLine();
+}
+//=====================Add By Tong============================//
+    #region Output
+    private string _outputDirectory = String.Empty;
+	
+    [Editor(typeof(System.Windows.Forms.Design.FolderNameEditor), typeof(System.Drawing.Design.UITypeEditor))] 
+	[CodeTemplateProperty(CodeTemplatePropertyOption.Optional)]
+	[Category("General")]
+	[Description("The directory to output the results to.")]
+	[DefaultValue("")]
+	public string OutputDirectory 
+	{ 
+		get
+		{
+			if (_outputDirectory.Length == 0)
+			{
+				
+				return @"D:\AutoGenerate";
+			}
+			else
+			{
+				return _outputDirectory;
+			}
+			Response.WriteLine(_outputDirectory);
+			if(!Directory.Exists(_outputDirectory)) Directory.CreateDirectory(_outputDirectory); 
+
+		}
+		set
+		{
+			if (value.EndsWith("\\")) value = value.Substring(0, value.Length - 1);
+			_outputDirectory = value;
+		} 
+	}
+	#endregion
+	
+//============================================================//
+</script>

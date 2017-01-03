@@ -1,0 +1,935 @@
+<%@ CodeTemplate Language="C#" TargetLanguage="C#" Description="Generates a very simple business object." %>
+<%@ Property Name="TargetTable" Type="SchemaExplorer.TableSchema" Category="Context" Description="TargetTable that the object is based on." %>
+<%@ Property Name="ModelsNamespace" Default="Models" Type="System.String" Category="Context" Description="TargetTable that the object is based on." %>
+<%@ Property Name="DALNamespace" Default="DAL" Type="System.String" Category="Context" Description="TargetTable that the object is based on." %>
+<%@ Property Name="DALClassNameSurfix" Default="Service" Type="System.String" Category="Context" Description="TargetTable that the object is based on." %>
+<%@ Assembly Name="SchemaExplorer" %>
+<%@ Assembly Name="System.Data" %>
+<%@ Import Namespace="SchemaExplorer" %>
+<%@ Import Namespace="System.Data" %>
+<%@ Import Namespace="System.Text.RegularExpressions" %>
+<%@ Import Namespace="System.IO" %>
+<% PrintHeader(); %>
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Data;
+using System.Data.SqlClient;
+
+using <%= ModelsNamespace %>;
+
+namespace <%= DALNamespace %>
+{
+	public static partial class <%= GetDALClassName() %>
+	{
+		<%-- public static Book AddBook(Book book) --%>
+        public static <%= GetModelClassName() %> Add<%= GetModelClassName() %>(<%= GetModelClassName() %> <%= GetModelParamName() %>)
+		{
+            string sql =
+				<%= GetInsertSQLLine1()%>
+				<%= GetInsertSQLLine2()%>
+				
+			sql += " ; SELECT @@IDENTITY";
+
+            try
+            {
+				SqlParameter[] para = new SqlParameter[]
+				{
+					<%
+					foreach(TableKeySchema key in TargetTable.ForeignKeys)
+					{
+					%>
+					new SqlParameter("@<%= GetFKForeignIdName(key) %>", DBHelper.GetValueByWhetherNull(<%= GetModelParamName() %>.<%= GetFKPropertyName(key) %>.<%= GetFKPrimaryIdName(key) %>)), //FK
+					<%
+					}
+					if(TargetTable.NonForeignKeyColumns.Count>1)
+					{
+					for(int i=0; i<TargetTable.NonKeyColumns.Count-1; i++)
+					{
+						ColumnSchema column = TargetTable.NonKeyColumns[i];
+					%>
+					new SqlParameter("@<%= column.Name %>", DBHelper.GetValueByWhetherNull(<%= GetModelParamName() %>.<%= column.Name %>)),
+					<%
+					}
+					}
+					if(TargetTable.NonForeignKeyColumns.Count>1)
+					{
+					for(int i=TargetTable.NonKeyColumns.Count-1; i<TargetTable.NonKeyColumns.Count; i++)
+					{
+						ColumnSchema lastColumn = TargetTable.NonKeyColumns[i];
+					%>
+					new SqlParameter("@<%= lastColumn.Name %>", DBHelper.GetValueByWhetherNull(<%= GetModelParamName() %>.<%= lastColumn.Name %>))
+					<%
+					}
+					}
+					%>
+				};
+				
+                int newId = DBHelper.GetScalar(sql, para);
+				return Get<%= GetModelClassName() %>By<%= GetPKPropertyName() %>(newId);
+            }
+            catch (Exception e)
+            {
+				Console.WriteLine(e.Message);
+                throw e;
+            }
+		}
+		
+		<%-- public static bool DeleteBook(Book book) --%>
+        public static void Delete<%= GetModelClassName() %>(<%= GetModelClassName() %> <%= GetModelParamName() %>)
+		{
+			Delete<%= GetModelClassName() %>By<%= GetPKPropertyName() %>( <%= GetModelParamName() %>.<%= GetPKPropertyName() %> );
+		}
+
+		<%-- public static bool DeleteBookById(int id) --%>
+        public static void Delete<%= GetModelClassName() %>By<%= GetPKPropertyName() %>(<%= GetPKPropertyType() %> <%= GetPKParamName() %>)
+		{
+            string sql = "DELETE <%= TargetTable.Name %> WHERE <%= GetPKPropertyName() %> = @<%= GetPKPropertyName() %>";
+
+            try
+            {
+				SqlParameter[] para = new SqlParameter[]
+				{
+					new SqlParameter("@<%= GetPKName() %>", <%= GetPKParamName() %>)
+				};
+			
+                DBHelper.ExecuteCommand(sql, para);
+            }
+            catch (Exception e)
+            {
+				Console.WriteLine(e.Message);
+				throw e;
+            }
+		}
+		
+		<%-- public static void DeleteBookByISBN(string iSBN) --%>
+		<% foreach( IndexSchema index in TargetTable.Indexes )
+		{
+			if(index.IsUnique && !index.IsPrimaryKey && index.MemberColumns.Count  == 1)
+			{
+				string indexColumnName = index.MemberColumns[0].Name;
+				ColumnSchema indexColumn = index.MemberColumns[0];
+
+				string indexPropertyName = MakePascal(indexColumnName);
+				string indexParamType = GetParamType(indexColumn);
+				string indexParamName = MakeCamel(indexColumnName);
+				string indexMemberName = MakeCamel(indexColumnName);
+		%>
+		<%-- public static void DeleteBookByISBN(string iSBN) --%>
+        public static void Delete<%= GetModelClassName() %>By<%= indexPropertyName %>(<%= indexParamType %> <%= indexParamName %>)
+		{
+            string sql = "DELETE <%= TargetTable.Name %> WHERE <%= indexPropertyName %> = @<%= indexPropertyName %>";
+
+            try
+            {
+				SqlParameter[] para = new SqlParameter[]
+				{
+					new SqlParameter("@<%= indexPropertyName %>", <%= indexParamName %>)
+				};
+			
+                DBHelper.ExecuteCommand(sql, para);
+            }
+            catch (Exception e)
+            {
+				Console.WriteLine(e.Message);
+				throw e;
+            }
+		}
+		
+			<% } %>
+		<% } %>						
+		<%-- public static bool ModifyBook(Book book) --%>
+        public static void Modify<%= GetModelClassName() %>(<%= GetModelClassName() %> <%= GetModelParamName() %>)
+        {
+            string sql =
+                "UPDATE <%= TargetTable.Name %> " +
+                "SET " +
+				<%
+				foreach(TableKeySchema key in TargetTable.ForeignKeys)
+				{
+				%>
+	                "<%= GetFKForeignIdName(key) %> = @<%= GetFKForeignIdName(key) %>, " + //FK
+				<%
+				}
+				if(TargetTable.NonForeignKeyColumns.Count>1)
+					{
+				for(int i=0; i<TargetTable.NonKeyColumns.Count-1; i++)
+				{
+					ColumnSchema column = TargetTable.NonKeyColumns[i];
+				%>
+	                "<%= column.Name %> = @<%= column.Name %>, " +
+				<%
+				}
+				}
+				if(TargetTable.NonForeignKeyColumns.Count>1)
+					{
+				for(int i=TargetTable.NonKeyColumns.Count-1; i<TargetTable.NonKeyColumns.Count; i++)
+				{
+					ColumnSchema column = TargetTable.NonKeyColumns[i];
+				%>
+	                "<%= column.Name %> = @<%= column.Name %> " +
+				<%
+				}
+				}
+				%>
+                "WHERE <%= GetPKName() %> = @<%= GetPKName() %>";
+
+
+            try
+            {
+				SqlParameter[] para = new SqlParameter[]
+				{
+					new SqlParameter("@<%= GetPKName() %>", <%= GetModelParamName() %>.<%= GetPKName() %>),
+					<%
+					foreach(TableKeySchema key in TargetTable.ForeignKeys)
+					{
+					%>
+					new SqlParameter("@<%= GetFKForeignIdName(key) %>", DBHelper.GetValueByWhetherNull(<%= GetModelParamName() %>.<%= GetFKPropertyName(key) %>.<%= GetFKPrimaryIdName(key) %>)), //FK
+					<%
+					}
+					if(TargetTable.NonForeignKeyColumns.Count>1)
+					{
+					for(int i=0; i<TargetTable.NonKeyColumns.Count-1; i++)
+					{
+						ColumnSchema column = TargetTable.NonKeyColumns[i];
+					%>
+					new SqlParameter("@<%= column.Name %>", DBHelper.GetValueByWhetherNull(<%= GetModelParamName() %>.<%= column.Name %>)),
+					<%
+					}
+					}
+					if(TargetTable.NonForeignKeyColumns.Count>1)
+					{
+					for(int i=TargetTable.NonKeyColumns.Count-1; i<TargetTable.NonKeyColumns.Count; i++)
+					{
+						ColumnSchema lastColumn = TargetTable.NonKeyColumns[i];
+					%>
+					new SqlParameter("@<%= lastColumn.Name %>", DBHelper.GetValueByWhetherNull(<%= GetModelParamName() %>.<%= lastColumn.Name %>))
+					<%
+					}
+					}
+					%>
+				};
+
+				DBHelper.ExecuteCommand(sql, para);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+				throw e;
+            }
+
+        }		
+
+		<%-- public static IList<Book> GetAllBooks() --%>
+        public static IList<<%= GetModelClassName() %>> GetAll<%= MakePlural(GetModelClassName()) %>()
+        {
+            string sqlAll = "SELECT * FROM <%= TargetTable.Name %>";
+			return Get<%= MakePlural(GetModelClassName()) %>BySql( sqlAll );
+        }
+		
+		<%-- public static Book GetBookById(int id) --%>
+        public static <%= GetModelClassName() %> Get<%= GetModelClassName() %>By<%= GetPKPropertyName() %>(<%= GetPKPropertyType() %> <%= GetPKParamName() %>)
+        {
+            string sql = "SELECT * FROM <%= TargetTable.Name %> WHERE <%= GetPKPropertyName() %> = @<%= GetPKPropertyName() %>";
+			<% if( TargetTable.ForeignKeys.Count != 0 ) %>
+			<% { %>
+
+				<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+				<% { %>
+			int <%= MakeCamel(GetFKForeignIdName(key)) %>;
+				<% } %>
+			<% } %>
+
+            try
+            {
+                SqlDataReader reader = DBHelper.GetReader(sql, new SqlParameter("@<%= GetPKPropertyName() %>", <%= GetPKParamName() %>));
+                if (reader.Read())
+                {
+					
+                    <%= GetModelClassName() %> <%= GetModelParamName() %> = new <%= GetModelClassName() %>();
+
+					<% foreach(ColumnSchema column in TargetTable.NonForeignKeyColumns) %>
+					<% { %>
+					try{
+					<%= GetModelParamName() %>.<%= GetPropertyName(column) %> = (<%= GetPropertyType(column) %>)reader["<%= column.Name %>"];
+					}catch
+					{}
+					<% } %>
+					<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+					<% { %>
+					<%= MakeCamel(GetFKForeignIdName(key)) %> = (int)reader["<%= key.ForeignKeyMemberColumns[0].Name %>"]; //FK
+					<% } %>
+
+                    reader.Close();
+					<% if( TargetTable.ForeignKeys.Count != 0 ) %>
+					<% { %>
+
+						<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+						<% { %>
+					<%= GetModelParamName() %>.<%= GetFKPropertyName(key) %> = <%= GetFKPropertyType(key) %><%= DALClassNameSurfix %>.Get<%= GetFKPropertyType(key) %>By<%= GetFKPrimaryIdName(key) %>(<%= MakeCamel(GetFKForeignIdName(key)) %>);
+						<% } %>
+					<% } %>
+					
+                    return <%= GetModelParamName() %>;
+                }
+                else
+                {
+                    reader.Close();
+                    return null;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw e;
+            }
+        }
+		
+		<%-- public static Book GetBookByISBN(string iSBN) --%>
+		<% foreach( IndexSchema index in TargetTable.Indexes )
+		{
+			if(index.IsUnique && !index.IsPrimaryKey && index.MemberColumns.Count  == 1)
+			{
+				string indexColumnName = index.MemberColumns[0].Name;
+				ColumnSchema indexColumn = index.MemberColumns[0];
+
+				string indexPropertyName = MakePascal(indexColumnName);
+				string indexParamType = GetParamType(indexColumn);
+				string indexParamName = MakeCamel(indexColumnName);
+				string indexMemberName = MakeCamel(indexColumnName);
+		%>
+		<%-- public static Book GetBookByISBN(string iSBN) --%>
+        public static <%= GetModelClassName() %> Get<%= GetModelClassName() %>By<% =indexPropertyName %>(<%= indexParamType %> <%= indexParamName %>)
+        {
+            string sql = "SELECT * FROM <%= TargetTable.Name %> WHERE <%= indexColumnName %> = @<%= indexColumnName %>";
+			<% if( TargetTable.ForeignKeys.Count != 0 ) %>
+			<% { %>
+
+				<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+				<% { %>
+			int <%= MakeCamel(GetFKForeignIdName(key)) %>;
+				<% } %>
+			<% } %>
+
+            try
+            {
+                SqlDataReader reader = DBHelper.GetReader(sql, new SqlParameter("@<%= indexColumnName %>", <%= indexParamName %>));
+                if (reader.Read())
+                {
+                    <%= GetModelClassName() %> <%= GetModelParamName() %> = new <%= GetModelClassName() %>();
+
+					<% foreach(ColumnSchema column in TargetTable.NonForeignKeyColumns) %>
+					<% { %>
+					try{
+					<%= GetModelParamName() %>.<%= GetPropertyName(column) %> = (<%= GetPropertyType(column) %>)reader["<%= column.Name %>"];
+					}catch
+					{}
+					
+					<% } %>
+					<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+					<% { %>
+					<%= MakeCamel(GetFKForeignIdName(key)) %> = (int)reader["<%= key.ForeignKeyMemberColumns[0].Name %>"]; //FK
+					<% } %>
+
+                    reader.Close();
+					<% if( TargetTable.ForeignKeys.Count != 0 ) %>
+					<% { %>
+		
+							<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+							<% { %>
+					<%= GetModelParamName() %>.<%= GetFKPropertyName(key) %> = <%= GetFKPropertyType(key) %><%= DALClassNameSurfix %>.Get<%= GetFKPropertyType(key) %>By<%= GetFKPrimaryIdName(key) %>(<%= MakeCamel(GetFKForeignIdName(key)) %>);
+							<% } %>
+					<% } %>
+
+                    return <%= GetModelParamName() %>;
+                }
+                else
+                {
+					reader.Close();
+                    return null;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw e;
+            }
+        }
+		
+			<% } %>
+		<% } %>
+		
+		
+		
+		<%-- public static IList<Book> GetBooksBySql( string sql ) --%>
+        private static IList<<%= GetModelClassName() %>> Get<%= MakePlural(GetModelClassName()) %>BySql( string safeSql )
+        {
+            List<<%= GetModelClassName() %>> list = new List<<%= GetModelClassName() %>>();
+
+			try
+			{
+				DataTable table = DBHelper.GetDataSet( safeSql );
+				
+				foreach (DataRow row in table.Rows)
+				{
+					<%= GetModelClassName() %> <%= GetModelParamName() %> = new <%= GetModelClassName() %>();
+					
+					<% foreach(ColumnSchema column in TargetTable.NonForeignKeyColumns) %>
+					<% { %>
+					try{
+					<%= GetModelParamName() %>.<%= GetPropertyName(column) %> = (<%= GetPropertyType(column) %>)row["<%= column.Name %>"];
+					}catch
+					{}
+					<% } %>
+					<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+					<% { %>
+					<%= GetModelParamName() %>.<%= GetFKPropertyName(key) %> = <%= GetFKPropertyType(key) %><%= DALClassNameSurfix %>.Get<%= GetFKPropertyType(key) %>By<%= GetFKPrimaryIdName(key) %>((int)row["<%= key.ForeignKeyMemberColumns[0].Name %>"]); //FK
+					<% } %>
+	
+					list.Add(<%= GetModelParamName() %>);
+				}
+	
+				return list;
+			}
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw e;
+            }
+
+        }
+		
+		<%-- public static IList<Book> GetBooksBySql( string sql, params SqlParameter[] values ) --%>
+        private static IList<<%= GetModelClassName() %>> Get<%= MakePlural(GetModelClassName()) %>BySql( string sql, params SqlParameter[] values )
+        {
+            List<<%= GetModelClassName() %>> list = new List<<%= GetModelClassName() %>>();
+
+			try
+			{
+				DataTable table = DBHelper.GetDataSet( sql, values );
+				
+				foreach (DataRow row in table.Rows)
+				{
+					<%= GetModelClassName() %> <%= GetModelParamName() %> = new <%= GetModelClassName() %>();
+					
+					<% foreach(ColumnSchema column in TargetTable.NonForeignKeyColumns) %>
+					<% { %>
+					try{
+					<%= GetModelParamName() %>.<%= GetPropertyName(column) %> = (<%= GetPropertyType(column) %>)row["<%= column.Name %>"];
+					}catch
+					{}
+					<% } %>
+					<% foreach(TableKeySchema key in TargetTable.ForeignKeys) %>
+					<% { %>
+					<%= GetModelParamName() %>.<%= GetFKPropertyName(key) %> = <%= GetFKPropertyType(key) %><%= DALClassNameSurfix %>.Get<%= GetFKPropertyType(key) %>By<%= GetFKPrimaryIdName(key) %>((int)row["<%= key.ForeignKeyMemberColumns[0].Name %>"]); //FK
+					<% } %>
+	
+					list.Add(<%= GetModelParamName() %>);
+				}
+	
+				return list;
+			}
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw e;
+            }
+			
+        }
+		
+	}
+}
+<script runat="template">
+//add by tong 2008-8-29
+
+///////////////////////////////////////////////////////////////
+// CLASS NAMES by Shen Bo
+///////////////////////////////////////////////////////////////
+// UserService
+public string GetDALClassName()
+{
+	return 	GetModelClassName() + DALClassNameSurfix;
+}
+// User
+public string GetModelClassName()
+{
+	return 	GetModelClassName(TargetTable);
+}
+// user
+public string GetModelMemberVarName()
+{
+	return GetModelParamName();
+}
+// user
+public string GetModelParamName()
+{
+	return MakeCamel(GetModelClassName());
+}
+// User
+public string GetModelClassName(TableSchema table)
+{
+	string result;
+	if ( table.ExtendedProperties.Contains("ModelName") )
+	{
+		result = (string)table.ExtendedProperties["ModelName"].Value;	
+		return MakePascal(result);
+	}
+
+	if (table.Name.EndsWith("s"))
+	{
+		//result = table.Name.Substring(0, table.Name.Length - 1);
+		result = MakeSingle(table.Name);
+	}
+	else
+	{
+		result = table.Name;
+	}
+
+	return MakePascal(result);
+}
+
+
+///////////////////////////////////////////////////////////////
+// INSERT SQL LINES by Shen Bo
+///////////////////////////////////////////////////////////////
+// "INSERT users (loginid, loginpwd, username, address, phone, mail, roleId, userstateid)" +
+public string GetInsertSQLLine1()
+{
+	string result;
+	result = "\"INSERT " + TargetTable.Name + " (";
+	foreach(ColumnSchema column in TargetTable.NonPrimaryKeyColumns)
+	{
+		result += column.Name + ", ";
+	}
+	result = result.Substring(0, result.Length-2);
+	result += ")\" +";
+
+	return result;
+}
+// "VALUES (@LoginId,@LoginPwd,@UserName,@Address,@Phone,@Mail,@RoleId,@UserStateId)";
+public string GetInsertSQLLine2()
+{
+	string result;
+	result = "\"VALUES (";
+	foreach(ColumnSchema column in TargetTable.NonPrimaryKeyColumns)
+	{
+		result += "@" + column.Name + ", ";
+	}
+	result = result.Substring(0, result.Length-2);
+	result += ")\";";
+	return result;
+}
+
+
+///////////////////////////////////////////////////////////////
+// PRIMARY KEY TYPE by Shen Bo
+///////////////////////////////////////////////////////////////
+// int
+public string GetPKPropertyType()
+{
+	return 	GetPKType(TargetTable);
+}
+// int
+public string GetPKType()
+{
+	return 	GetPKType(TargetTable);
+}
+// int
+public string GetPKType(TableSchema TargetTable)
+{
+	if (TargetTable.PrimaryKey != null)
+	{
+		if (TargetTable.PrimaryKey.MemberColumns.Count == 1)
+		{
+			return GetCSharpTypeFromDBFieldType(TargetTable.PrimaryKey.MemberColumns[0]);
+		}
+		else
+		{
+			throw new ApplicationException("This template will not work on primary keys with more than one member column.");
+		}
+	}
+	else
+	{
+		throw new ApplicationException("This template will only work on MyTables with a primary key.");
+	}
+}
+
+
+///////////////////////////////////////////////////////////////
+// PRIMARY KEY NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+// Id
+public string GetPKPropertyName()
+{
+	return MakePascal(GetPKName());
+}
+// id
+public string GetPKParamName()
+{
+	return GetPKMemberVarName();	
+}
+// id
+public string GetPKMemberVarName()
+{
+	return MakeCamel(GetPKName());	
+}
+// Id
+public string GetPKName()
+{
+	return GetPKName(TargetTable);
+}
+// Id
+public string GetPKName(TableSchema TargetTable)
+{
+	if (TargetTable.PrimaryKey != null)
+	{
+		if (TargetTable.PrimaryKey.MemberColumns.Count == 1)
+		{
+			return TargetTable.PrimaryKey.MemberColumns[0].Name;
+		}
+		else
+		{
+			throw new ApplicationException("This template will not work on primary keys with more than one member column.");
+		}
+	}
+	else
+	{
+		throw new ApplicationException("This template will only work on tables with a primary key.");
+	}
+}
+
+
+///////////////////////////////////////////////////////////////
+// FOREIGH KEY PROPERTY TYPE by Shen Bo
+///////////////////////////////////////////////////////////////
+// UserState
+public string GetFKPropertyType(TableKeySchema key)
+{
+	return MakePascal(GetFKPrimaryModelClassName(key));
+}
+
+///////////////////////////////////////////////////////////////
+// FOREIGH KEY PROPERTY NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+// userState
+public string GetFKMemberVarName(TableKeySchema key)
+{
+	string result = GetFKForeignIdName(key);
+	if( result.ToLower().EndsWith("id") )
+	{
+		result = result.Substring(0, result.Length - 2);	
+	}
+	return MakeCamel(result);
+}
+// UserState
+public string GetFKPropertyName(TableKeySchema key)
+{
+	return MakePascal(GetFKMemberVarName(key));
+}
+// UserState
+public string GetFKPrimaryModelClassName(TableKeySchema key)
+{
+	return GetModelClassName(key.PrimaryKeyTable);
+}
+
+///////////////////////////////////////////////////////////////
+// FOREIGH KEY ID NAMEs by Shen Bo
+///////////////////////////////////////////////////////////////
+//In User table => UserStateId
+public string GetFKForeignIdName(TableKeySchema key)	
+{
+	return key.ForeignKeyMemberColumns[0].Name;
+}
+//In UserState table => Id
+public string GetFKPrimaryIdName(TableKeySchema key)
+{
+	return key.PrimaryKeyMemberColumns[0].Name;
+}
+
+
+///////////////////////////////////////////////////////////////
+// PROPERTY TYPE by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetPropertyType(ColumnSchema column)
+{
+	return GetCSharpTypeFromDBFieldType(column);
+}
+public string GetMemberVarType(ColumnSchema column)
+{
+	return GetCSharpTypeFromDBFieldType(column);
+}
+public string GetParamType(ColumnSchema column)
+{
+	return GetCSharpTypeFromDBFieldType(column);
+}
+public string GetCSharpTypeFromDBFieldType(ColumnSchema column)
+{
+	if (column.Name.EndsWith("TypeCode")) return column.Name;
+	
+	switch (column.DataType)
+	{
+		case DbType.AnsiString: return "string";
+		case DbType.AnsiStringFixedLength: return "string";
+		case DbType.Binary: return "byte[]";
+		case DbType.Boolean: return "bool";
+		case DbType.Byte: return "byte";
+		case DbType.Currency: return "decimal";
+		case DbType.Date: return "DateTime";
+		case DbType.DateTime: return "DateTime";
+		case DbType.Decimal: return "decimal";
+		case DbType.Double: return "double";
+		case DbType.Guid: return "Guid";
+		case DbType.Int16: return "short";
+		case DbType.Int32: return "int";
+		case DbType.Int64: return "long";
+		case DbType.Object: return "object";
+		case DbType.SByte: return "sbyte";
+		case DbType.Single: return "float";
+		case DbType.String: return "string";
+		case DbType.StringFixedLength: return "string";
+		case DbType.Time: return "TimeSpan";
+		case DbType.UInt16: return "ushort";
+		case DbType.UInt32: return "uint";
+		case DbType.UInt64: return "ulong";
+		case DbType.VarNumeric: return "decimal";
+		default:
+		{
+			return "__UNKNOWN__" + column.NativeType;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////
+// PROPERTY NAME by Shen Bo
+///////////////////////////////////////////////////////////////
+public string GetMemberVarName(ColumnSchema column)
+{
+	return MakeCamel(GetNameFromDBFieldName(column));
+}
+public string GetPropertyName(ColumnSchema column)
+{
+	return MakePascal(GetNameFromDBFieldName(column));
+}
+public string GetNameFromDBFieldName(ColumnSchema column)
+{
+	string name = column.Name;
+	if(name.StartsWith(GetDALClassName()))
+	{
+		name = name.Substring(GetDALClassName().Length);	
+	}
+	return name;
+}
+
+
+public string GetMemberVariableDefaultValue(ColumnSchema column)
+{
+	switch (column.DataType)
+	{
+		case DbType.Guid:
+		{
+			return "Guid.Empty";
+		}
+		case DbType.AnsiString:
+		case DbType.AnsiStringFixedLength:
+		case DbType.String:
+		case DbType.StringFixedLength:
+		{
+			return "String.Empty";
+		}
+		default:
+		{
+			return "";
+		}
+	}
+}
+
+
+public string GetReaderMethod(ColumnSchema column)
+{
+	switch (column.DataType)
+	{
+		case DbType.Byte:
+		{
+			return "GetByte";
+		}
+		case DbType.Int16:
+		{
+			return "GetInt16";
+		}
+		case DbType.Int32:
+		{
+			return "GetInt32";
+		}
+		case DbType.Int64:
+		{
+			return "GetInt64";
+		}
+		case DbType.AnsiStringFixedLength:
+		case DbType.AnsiString:
+		case DbType.String:
+		case DbType.StringFixedLength:
+		{
+			return "GetString";
+		}
+		case DbType.Boolean:
+		{
+			return "GetBoolean";
+		}
+		case DbType.Guid:
+		{
+			return "GetGuid";
+		}
+		case DbType.Currency:
+		case DbType.Decimal:
+		{
+			return "GetDecimal";
+		}
+		case DbType.DateTime:
+		case DbType.Date:
+		{
+			return "GetDateTime";
+		}
+		case DbType.Binary:
+		{
+			return "GetBytes";
+		}
+		default:
+		{
+			return "__SQL__" + column.DataType;
+		}
+	}
+}
+
+public string GetSqlDbType(ColumnSchema column)
+{
+	switch (column.NativeType)
+	{
+		case "bigint": return "BigInt";
+		case "binary": return "Binary";
+		case "bit": return "Bit";
+		case "char": return "Char";
+		case "datetime": return "DateTime";
+		case "decimal": return "Decimal";
+		case "float": return "Float";
+		case "image": return "Image";
+		case "int": return "Int";
+		case "money": return "Money";
+		case "nchar": return "NChar";
+		case "ntext": return "NText";
+		case "numeric": return "Decimal";
+		case "nvarchar": return "NVarChar";
+		case "real": return "Real";
+		case "smalldatetime": return "SmallDateTime";
+		case "smallint": return "SmallInt";
+		case "smallmoney": return "SmallMoney";
+		case "sql_variant": return "Variant";
+		case "sysname": return "NChar";
+		case "text": return "Text";
+		case "timestamp": return "Timestamp";
+		case "tinyint": return "TinyInt";
+		case "uniqueidentifier": return "UniqueIdentifier";
+		case "varbinary": return "VarBinary";
+		case "varchar": return "VarChar";
+		default: return "__UNKNOWN__" + column.NativeType;
+	}
+}
+
+//So dirty function! -- reviewed by shenbo
+public string MakeCamel(string value)
+{
+	return value.Substring(0, 1).ToLower() + value.Substring(1);
+}
+
+//I will be dirty too! -- coded by shenbo
+public string MakePascal(string value)
+{
+	return value.Substring(0, 1).ToUpper() + value.Substring(1);
+}
+
+public string MakePlural(string name)
+{
+	Regex plural1 = new Regex("(?<keep>[^aeiou])y$");
+	Regex plural2 = new Regex("(?<keep>[aeiou]y)$");
+	Regex plural3 = new Regex("(?<keep>[sxzh])$");
+	Regex plural4 = new Regex("(?<keep>[^sxzhy])$");
+
+	if(plural1.IsMatch(name))
+		return plural1.Replace(name, "${keep}ies");
+	else if(plural2.IsMatch(name))
+		return plural2.Replace(name, "${keep}s");
+	else if(plural3.IsMatch(name))
+		return plural3.Replace(name, "${keep}es");
+	else if(plural4.IsMatch(name))
+		return plural4.Replace(name, "${keep}s");
+
+	return name;
+}
+
+public string MakeSingle(string name)
+{
+	Regex plural1 = new Regex("(?<keep>[^aeiou])ies$");
+	Regex plural2 = new Regex("(?<keep>[aeiou]y)s$");
+	Regex plural3 = new Regex("(?<keep>[sxzh])es$");
+	Regex plural4 = new Regex("(?<keep>[^sxzhyu])s$");
+
+	if(plural1.IsMatch(name))
+		return plural1.Replace(name, "${keep}y");
+	else if(plural2.IsMatch(name))
+		return plural2.Replace(name, "${keep}");
+	else if(plural3.IsMatch(name))
+		return plural3.Replace(name, "${keep}");
+	else if(plural4.IsMatch(name))
+		return plural4.Replace(name, "${keep}");
+
+	return name;
+}
+
+public override string GetFileName()
+{
+	return this.GetDALClassName() + ".cs";
+}
+
+public void PrintHeader()
+{
+	Response.WriteLine("//============================================================");
+	Response.WriteLine("// Producnt name:		DAL");
+	Response.WriteLine("// Version: 			7.0");
+	Response.WriteLine("// Coded by:			tjh");
+	Response.WriteLine("// Auto generated at: 	{0}", DateTime.Now);
+	Response.WriteLine("//============================================================");
+	Response.WriteLine();
+}
+//=====================Add By Tong============================//
+    #region Output
+    private string _outputDirectory = String.Empty;
+	
+    [Editor(typeof(System.Windows.Forms.Design.FolderNameEditor), typeof(System.Drawing.Design.UITypeEditor))] 
+	[CodeTemplateProperty(CodeTemplatePropertyOption.Optional)]
+	[Category("General")]
+	[Description("The directory to output the results to.")]
+	[DefaultValue("")]
+	public string OutputDirectory 
+	{ 
+		get
+		{
+			if (_outputDirectory.Length == 0)
+			{
+				return @"D:\AutoGenerate";
+			}
+			else
+			{
+				return _outputDirectory;
+			}
+			
+			if(!Directory.Exists(_outputDirectory)) Directory.CreateDirectory(_outputDirectory); 
+		}
+		set
+		{
+			if (value.EndsWith("\\")) value = value.Substring(0, value.Length - 1);
+			_outputDirectory = value;
+		} 
+	}
+	#endregion
+
+//============================================================//
+</script>

@@ -1,0 +1,76 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9608887D-62EC-425C-B886-5F26AA41D80D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DAL</RootNamespace>
+    <AssemblyName>DAL</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AutoGenerate\T_AccessoryService.cs" />
+    <Compile Include="T_AccessoryService.cs" />
+    <Compile Include="AutoGenerate\DBHelper.cs" />
+    <Compile Include="AutoGenerate\T_BaseInfoService.cs" />
+    <Compile Include="T_BaseInfoService.cs" />
+    <Compile Include="AutoGenerate\T_CheckupCorpService.cs" />
+    <Compile Include="T_CheckupCorpService.cs" />
+    <Compile Include="AutoGenerate\T_CheckupService.cs" />
+    <Compile Include="T_CheckupService.cs" />
+    <Compile Include="AutoGenerate\T_DepartmentService.cs" />
+    <Compile Include="T_DepartmentService.cs" />
+    <Compile Include="AutoGenerate\T_DistrictService.cs" />
+    <Compile Include="T_DistrictService.cs" />
+    <Compile Include="AutoGenerate\T_InvestigateService.cs" />
+    <Compile Include="T_InvestigateService.cs" />
+    <Compile Include="AutoGenerate\T_MenuService.cs" />
+    <Compile Include="T_MenuService.cs" />
+    <Compile Include="AutoGenerate\T_RoleService.cs" />
+    <Compile Include="T_RoleService.cs" />
+    <Compile Include="AutoGenerate\T_RoleMenuRelationService.cs" />
+    <Compile Include="T_RoleMenuRelationService.cs" />
+    <Compile Include="AutoGenerate\T_UserService.cs" />
+    <Compile Include="T_UserService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Models\Models.csproj">
+      <Project>{BEA91B7E-34C2-46C9-A185-475742BD2B12}</Project>
+      <Name>Models</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

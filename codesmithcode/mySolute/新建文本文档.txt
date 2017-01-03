@@ -1,0 +1,5 @@
+        <%-- get results by raw sql string --%>
+        public static IList<<%= GetModelClassName() %>> Get<%= GetModelClassName() %>sBySQLstring(str sqlstring)
+        {
+            return <%= GetDALClassName() %>.Get<%= GetModelClassName() %>sBySQLstring(str sqlstring);
+        }

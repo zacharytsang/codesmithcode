@@ -1,0 +1,16 @@
+<%@ CodeTemplate Language="C#" TargetLanguage="Xml" Src="" Inherits="" Debug="False" Description="Template description here." %>
+<%@ Property Name="ConnString" Default="database=mydb;server=.;uid=sa;pwd=;" Type="System.String" Category="Context" Description="TargetTable that the object is based on." %>
+<?xml version="1.0"?>
+
+<configuration>
+	<connectionStrings>
+		<add name="conn"  connectionString="<%=ConnString%>"/>
+	</connectionStrings>
+	<system.web>
+
+		<compilation debug="true"/>
+
+		<authentication mode="Windows"/>
+
+	</system.web>
+</configuration>

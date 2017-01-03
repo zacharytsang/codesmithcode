@@ -1,0 +1,9 @@
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\obj\Debug\BLL.csprojResolveAssemblyReference.cache
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\obj\Debug\BLL.dll
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\obj\Debug\BLL.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\bin\Debug\BLL.dll
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\bin\Debug\BLL.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\bin\Debug\DAL.dll
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\bin\Debug\Models.dll
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\bin\Debug\DAL.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\BLL\bin\Debug\Models.pdb

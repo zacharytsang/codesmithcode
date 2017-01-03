@@ -1,0 +1,5 @@
+D:\Desktop\SimpleThreeTiers\mySolute\Models\obj\Debug\Models.dll
+D:\Desktop\SimpleThreeTiers\mySolute\Models\obj\Debug\Models.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\Models\bin\Debug\Models.dll
+D:\Desktop\SimpleThreeTiers\mySolute\Models\bin\Debug\Models.pdb
+D:\Desktop\SimpleThreeTiers\mySolute\Models\obj\Debug\Models.csprojResolveAssemblyReference.cache
